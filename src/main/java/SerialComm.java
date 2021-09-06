@@ -42,13 +42,7 @@ public class SerialComm {
     }
 
     public void writeData(DatatypeOut DTOut, long data) {
-        if (data >= Long.MAX_VALUE) {
-            System.err.println("Data too large.");
-            return;
-        }
-
         byte[] dataArray = longToByteArray(data);
-
         writeData(DTOut, dataArray);
     }
 
@@ -58,7 +52,7 @@ public class SerialComm {
         System.arraycopy(VERSION, 0, writeBuffer, HEADER.length, VERSION.length);
         writeBuffer[3] = packetNum++; // ret then increment
         writeBuffer[4] = PKT_LEN;
-        writeBuffer[6] = (byte)DTOut.getValue();
+        writeBuffer[5] = (byte)DTOut.getValue();
         System.arraycopy(dataArray, 0, writeBuffer, 6, dataArray.length);
 
         long sum = 0;
