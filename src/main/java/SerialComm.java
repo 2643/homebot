@@ -14,7 +14,7 @@ public class SerialComm {
     private static byte PKT_LEN = 0x11;
 
     // init 2d array for each item + 2 status datatypes
-    private static byte[][] in_data = new byte[numDatatypes][8];
+    private static byte[][] dataBuffer = new byte[numDatatypes][8];
     private static ReentrantLock[] mutexes = new ReentrantLock[numDatatypes];
     private static byte packetNumOut = 0x00; // allow to overflow.
     // we'll see if I need writeLock, much more of a pain to implement. - Probably an Asian
@@ -28,7 +28,7 @@ public class SerialComm {
     public static byte[] TRAILER = {(byte)0xad};
 
     // ... |2HDR|1VER|1PKT#|1PKT_LEN(FUTURE_USE)|1DT|8DATA|2CHKSUM|1TRL| ...
-
+    // ... |0000|2222|33333|44444444444444444444|555|66666|ddddddd|ffff|
     public static void main(String[] args) {
     }
 
@@ -79,13 +79,15 @@ public class SerialComm {
     }
 
     public void readDataIn() {
-        if (SerialIOPort.bytesAvailable() < PKT_LEN) {
-            return;
-        }
+        // if (SerialIOPort.bytesAvailable() < PKT_LEN) {
+        //     return;
+        // }
 
         byte[] readBuffer = new byte[PKT_LEN];
 
-        SerialIOPort.readBytes(readBuffer, PKT_LEN);
+        // SerialIOPort.readBytes(readBuffer, PKT_LEN);
+        readBuffer = toByteArray("2F5C000011010000000000C6218F0213AD");
+        System.out.println(toHexString(readBuffer));
 
         boolean valid = true;
         
@@ -95,16 +97,74 @@ public class SerialComm {
         if (readBuffer[1] != HEADER[1]) {
             valid = false;
         }
+        if (readBuffer[2] != VERSION[0]) {
+            valid = false;
+        }
+        if (readBuffer[3] != packetNumIn) {
+            valid = false;
+        }
+        if (readBuffer[PKT_LEN-1] != TRAILER[0]) {
+            valid = false;
+        }
 
+        if (!valid) {
+            writeData(DatatypeOut.ERROR, 0);
+            System.exit(1);
+        }
+
+        long sum = 0;
+        for (int i = 0; i < 14; i++) {
+            sum += Byte.toUnsignedInt(readBuffer[i]);
+        }
+
+        byte[] checksum = longToByteArray(sum);
+        if (readBuffer[0x0e] != checksum[6]) {
+            valid = false;
+        }
+        if (readBuffer[0x0f] != checksum[7]) {
+            valid = false;
+        }
+
+        if (!valid) {
+            writeData(DatatypeOut.ERROR, 0);
+            System.exit(1);
+        }
+
+        int inputDatatype = Byte.toUnsignedInt(readBuffer[0x05]);
+        if (inputDatatype == DatatypeIn.ERROR.getValue()) {
+            System.err.println("ERROR");
+            System.exit(1);
+        }
+        else if (inputDatatype == DatatypeIn.READY.getValue()) {
+            writeLock.release();
+        }
+        else {
+            mutexes[inputDatatype].lock();
+            try {
+                System.arraycopy(readBuffer, 6, dataBuffer[inputDatatype], 0, 8);
+                System.out.println(toHexString(dataBuffer[inputDatatype]));
+            }
+            finally {
+                mutexes[inputDatatype].unlock();
+            }
+        }
+    }
+    
+    public byte[] getData(DatatypeIn ID) {
+       return getData(ID.getValue());
     }
 
     public byte[] getData(int ID) {
+        byte[] dataOut = new byte[8];
+
         mutexes[ID].lock();
         try {
-            return in_data[ID];
+            dataOut = dataBuffer[ID];
         } finally {
             mutexes[ID].unlock();
         }
+
+        return dataOut;
     }
 
     public static void printPorts() {
