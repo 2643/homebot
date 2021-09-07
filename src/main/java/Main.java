@@ -7,6 +7,6 @@ public class Main {
 		// System.out.println(SerialComm.toHexString(test));
 		sCommObj.writeData(DatatypeOut.RIGHT_FRONT_MOTOR, 12984719);
 		sCommObj.readDataIn();
-		System.out.println(SerialComm.toHexString(sCommObj.getData(DatatypeOut.RIGHT_FRONT_MOTOR.getValue())));
+		// System.out.println(SerialComm.toHexString(sCommObj.getData(DatatypeOut.RIGHT_FRONT_MOTOR.getValue())));
 	}	
 }

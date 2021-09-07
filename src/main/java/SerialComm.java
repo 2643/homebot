@@ -79,14 +79,14 @@ public class SerialComm {
     }
 
     public void readDataIn() {
-        // if (SerialIOPort.bytesAvailable() < PKT_LEN) {
-        //     return;
-        // }
+        if (SerialIOPort.bytesAvailable() < PKT_LEN) {
+            return;
+        }
 
         byte[] readBuffer = new byte[PKT_LEN];
 
-        // SerialIOPort.readBytes(readBuffer, PKT_LEN);
-        readBuffer = toByteArray("2F5C000011010000000000C6218F0213AD");
+        SerialIOPort.readBytes(readBuffer, PKT_LEN);
+        // readBuffer = toByteArray("2F5C000011010000000000C6218F0213AD");
         System.out.println(toHexString(readBuffer));
 
         boolean valid = true;
