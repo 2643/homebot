@@ -1,9 +1,10 @@
-package src.main.java;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
-import java.lang.Exception;
+
 import javax.xml.bind.DatatypeConverter;
+
 import com.fazecast.jSerialComm.*;
 
 public class SerialComm {
@@ -15,9 +16,12 @@ public class SerialComm {
     // init 2d array for each item + 2 status datatypes
     private static byte[][] in_data = new byte[numDatatypes][8];
     private static ReentrantLock[] mutexes = new ReentrantLock[numDatatypes];
-    private static byte packetNum = 0x00; // allow to overflow.
+    private static byte packetNumOut = 0x00; // allow to overflow.
     // we'll see if I need writeLock, much more of a pain to implement. - Probably an Asian
     // private static ReentrantLock writeLock = new ReentrantLock();
+    private static Semaphore writeLock = new Semaphore(1);
+
+    private static byte packetNumIn = 0x00; //allow to overflow
 
     public static byte[] HEADER = {0x2f, 0x5c};
     public static byte[] VERSION = {0x00};
@@ -50,7 +54,7 @@ public class SerialComm {
         byte[] writeBuffer = new byte[17];
         System.arraycopy(HEADER, 0, writeBuffer, 0, HEADER.length);
         System.arraycopy(VERSION, 0, writeBuffer, HEADER.length, VERSION.length);
-        writeBuffer[3] = packetNum++; // ret then increment
+        writeBuffer[3] = packetNumOut++; // ret then increment
         writeBuffer[4] = PKT_LEN;
         writeBuffer[5] = (byte)DTOut.getValue();
         System.arraycopy(dataArray, 0, writeBuffer, 6, dataArray.length);
@@ -64,7 +68,34 @@ public class SerialComm {
         System.arraycopy(TRAILER, 0, writeBuffer, 16, TRAILER.length);
 
         System.out.println(toHexString(writeBuffer));
-        SerialIOPort.writeBytes(writeBuffer, 17);
+
+        try {
+            writeLock.acquire();
+            SerialIOPort.writeBytes(writeBuffer, 17);
+        } catch (InterruptedException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    public void readDataIn() {
+        if (SerialIOPort.bytesAvailable() < PKT_LEN) {
+            return;
+        }
+
+        byte[] readBuffer = new byte[PKT_LEN];
+
+        SerialIOPort.readBytes(readBuffer, PKT_LEN);
+
+        boolean valid = true;
+        
+        if (readBuffer[0] != HEADER[0]) {
+            valid = false;
+        }
+        if (readBuffer[1] != HEADER[1]) {
+            valid = false;
+        }
+
     }
 
     public byte[] getData(int ID) {

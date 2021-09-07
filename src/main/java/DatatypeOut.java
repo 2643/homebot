@@ -1,5 +1,3 @@
-package src.main.java;
-
 public enum DatatypeOut {
 	LEFT_FRONT_MOTOR(0x00),
 	RIGHT_FRONT_MOTOR(0x01),

@@ -39,5 +39,5 @@ dependencies {
 }
 
 application {
-    mainClass = 'src.main.java.Main' 
+    mainClass = 'Main' 
 }

@@ -1,5 +1,3 @@
-package src.main.java;
-
 public enum DatatypeIn {
 	LEFT_FRONT_ENCODER(0x00),
 	RIGHT_FRONT_ENCODER(0x01),
